@@ -1,6 +1,5 @@
-using System;
-using System.Text;
-using APIService.Connection;
+﻿using APIService.Connection;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 //using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -10,6 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SAPbobsCOM;
+using System;
+using System.Text;
 
 namespace APIService
 {
@@ -28,11 +30,82 @@ namespace APIService
             services.AddControllers();
             services.Configure<ApiBehaviorOptions>(options => { options.SuppressModelStateInvalidFilter = true; });
 
+            #region CORS
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowWebService",
+                    builder =>
+                    {
+                        builder.WithOrigins("https://localhost:5003")
+                               .AllowAnyHeader()
+                               .AllowAnyMethod();
+                    });
+            });
+
+            #endregion
+
             #region AddScope
 
             #endregion
 
             #region ConfigureJWTToken
+//            Console.WriteLine("SECRET = " + Configuration["Secret"]);
+//            var tokenvalidationParameters = new TokenValidationParameters
+//            {
+//                ValidateIssuerSigningKey = true,
+//                IssuerSigningKey =
+//                    new SymmetricSecurityKey(Encoding.UTF8.GetBytes("MY_SUPER_ULTRA_SECRET_KEY_FOR_JWT_TOKEN_2026_PROJECT")),
+//                ValidateIssuer = false,
+//                ValidateAudience = false,
+//                RequireExpirationTime = true,
+//                ValidateLifetime = true,
+//                ClockSkew = TimeSpan.FromDays(10)
+//            };
+//            services.AddSingleton(tokenvalidationParameters);
+//            services.AddAuthentication(options =>
+//            {
+//                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+//                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+//            })
+//            .AddJwtBearer(options =>
+//            {
+//                options.TokenValidationParameters = tokenvalidationParameters;
+
+//                options.Events = new JwtBearerEvents
+//                {
+//                    OnMessageReceived = context =>
+//                    {
+//                        var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+//                        Console.WriteLine(
+//    $"[{context.Request.Method}] {context.Request.Path} Authorization: {authHeader}"
+//);
+//                        if (string.IsNullOrEmpty(authHeader))
+//                        {
+//                            // ไม่มี token → ข้าม
+//                            return Task.CompletedTask;
+//                        }
+
+//                        Console.WriteLine("Authorization Header: " + authHeader);
+
+//                        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+//                        {
+//                            context.Token = authHeader.Substring("Bearer ".Length).Trim();
+//                        }
+
+//                        return Task.CompletedTask;
+//                    },
+
+//                    OnAuthenticationFailed = context =>
+//                    {
+//                        Console.WriteLine("JWT ERROR: " + context.Exception);
+//                        return Task.CompletedTask;
+//                    }
+//                };
+//            });
+
+//            services.AddAuthorization();
+
             #endregion
 
             #region Swagger
@@ -68,6 +141,14 @@ namespace APIService
             });
 
             #endregion
+
+            #region SAP Service
+
+            services.AddSingleton<ISapConnection, SapConnection>();
+            services.AddSingleton<SapConnectionPool>();
+            services.AddScoped<SapOrderService>();
+
+            #endregion
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -82,24 +163,30 @@ namespace APIService
 
             app.UseHttpsRedirection();
             app.UseRouting();
-            app.UseAuthentication();
-            app.UseAuthorization();
+            app.UseCors("AllowWebService");
+            //app.UseAuthentication();
+            //app.UseAuthorization();
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
-            ConnectionString.DbServerType = Configuration.GetSection("DbServerType").Value;
-            ConnectionString.Server = Configuration.GetSection("Server").Value;
-            ConnectionString.LicenseServer = Configuration.GetSection("LicenseServer").Value;
-            ConnectionString.SLDServer = Configuration.GetSection("SLDServer").Value;
-            ConnectionString.DbUserName = Configuration.GetSection("DbUserName").Value;
-            ConnectionString.DbPassword = Configuration.GetSection("DbPassword").Value;
-            ConnectionString.CompanyDB = Configuration.GetSection("CompanyDB").Value;
-            ConnectionString.UserName = Configuration.GetSection("UserNameSAP").Value;
-            ConnectionString.Password = Configuration.GetSection("Password").Value;
-            ConnectionString.ConnHana = Configuration.GetSection("ConnectionStringHANA2").Value;
-            ConnectionString.PronWebDb = Configuration.GetSection("PronWebDB").Value;
-            ConnectionString.PronWebDB = Configuration.GetSection("PronWebDB").Value;
-            ConnectionString.ServerGET = Configuration.GetSection("ServerGET").Value;
-            ConnectionString.ServerGETName = Configuration.GetSection("ServerGETName").Value;
-            SapDriverOCompany.Init_oCompany();
+
+            LoadConnectionConfig();
+            /*SapDriverOCompany.Init_oCompany();*/
+        }
+
+        private void LoadConnectionConfig()
+        {
+            ConnectionString.DbServerType = Configuration["DbServerType"];
+            ConnectionString.Server = Configuration["Server"];
+            ConnectionString.LicenseServer = Configuration["LicenseServer"];
+            ConnectionString.SLDServer = Configuration["SLDServer"];
+            ConnectionString.DbUserName = Configuration["DbUserName"];
+            ConnectionString.DbPassword = Configuration["DbPassword"];
+            ConnectionString.CompanyDB = Configuration["CompanyDB"];
+            ConnectionString.UserName = Configuration["UserNameSAP"];
+            ConnectionString.Password = Configuration["Password"];
+            ConnectionString.ConnHana = Configuration["ConnectionStringHANA2"];
+            ConnectionString.PronWebDB = Configuration["PronWebDB"];
+            ConnectionString.ServerGET = Configuration["ServerGET"];
+            ConnectionString.ServerGETName = Configuration["ServerGETName"];
         }
     }
 }

@@ -1,14 +1,6 @@
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    }
-  },
-  "AllowedHosts": "*",
   "ReverseProxy": {
     "Routes": {
-
       "authRoute": {
         "ClusterId": "authCluster",
         "Match": {
@@ -18,16 +10,14 @@
 
       "apiRoute": {
         "ClusterId": "apiCluster",
-        "AuthorizationPolicy": "authenticated",
         "Match": {
           "Path": "/api/{**catch-all}"
-        }
+        },
+        "AuthorizationPolicy": "authenticated"
       }
-
     },
 
     "Clusters": {
-
       "authCluster": {
         "Destinations": {
           "authService": {
@@ -37,14 +27,12 @@
       },
 
       "apiCluster": {
-        "LoadBalancingPolicy": "RoundRobin",
         "Destinations": {
-          "api1": {
+          "apiService": {
             "Address": "https://localhost:5002/"
           }
         }
       }
-
     }
   }
 }
